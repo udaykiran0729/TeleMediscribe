@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TeleMediScribe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .dashboard-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 2rem 0;
+        }
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+        }
+        .quick-link-card {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .quick-link-card:hover {
+            background: #dee2e6;
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .quick-link-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #007bff;
+        }
+        .quick-link-card h5 {
+            font-size: 1.2rem;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">
+                <img src="logo.png" alt="TeleMediScribe Logo" class="logo-img" />
+                <h1>TeleMediScribe</h1>
+            </div>
+            <ul>
+                <li><a href="dashboard.html" class="active">Dashboard</a></li>
+                <li><a href="symptom-check.html">Symptom Check</a></li>
+                <li><a href="medication-reminder.html">Medication Reminder</a></li>
+                <li><a href="profile.html">Profile</a></li>
+            </ul>
+            <div>
+                <button class="button secondary" onclick="handleLogout()">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-10">
+                    <div class="dashboard-card">
+                        <div class="text-center mb-4">
+                            <img src="logo.png" alt="TeleMediScribe Logo" style="width: 80px; height: 80px; margin-bottom: 15px;">
+                            <h2 class="fw-bold" id="welcomeMessage">Hello, User</h2>
+                            <p class="text-muted">Your TeleMediScribe Dashboard</p>
+                        </div>
+
+                        <!-- Quick Links -->
+                        <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+                            <div class="col">
+                                <a href="symptom-check.html" class="quick-link-card">
+                                    <i class="fas fa-stethoscope"></i>
+                                    <h5>Symptom Check</h5>
+                                </a>
+                            </div>
+                            <div class="col">
+                                <a href="medication-reminder.html" class="quick-link-card">
+                                    <i class="fas fa-pills"></i>
+                                    <h5>Medication Reminder</h5>
+                                </a>
+                            </div>
+                            <div class="col">
+                                <a href="profile.html" class="quick-link-card">
+                                    <i class="fas fa-user-circle"></i>
+                                    <h5>My Profile</h5>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Dashboard Sections (Placeholders) -->
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Upcoming Medications</h5>
+                                        <p class="card-text" id="upcomingMedications">No medications added yet.</p>
+                                        <a href="medication-reminder.html" class="btn btn-primary">View Schedule</a>
+                                    </div>
+                                </div>
+                            </div>
+                             <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Medical History Summary</h5>
+                                        <p class="card-text" id="medicalHistorySummary">Loading...</p>
+                                        <a href="profile.html#medical" class="btn btn-primary">View History</a>
+                                    </div>
+                                </div>
+                            </div>
+                             <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Allergy Summary</h5>
+                                        <p class="card-text" id="allergySummary">Loading...</p>
+                                        <a href="profile.html#allergies" class="btn btn-primary">View Allergies</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentUser = dataManager.getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('welcomeMessage').textContent = `Hello, ${currentUser.name || 'User'}`;
+                loadDashboardData();
+            }
+        });
+
+        function loadDashboardData() {
+            // Load Upcoming Medications
+            const medications = dataManager.getMedications();
+            const upcomingMedicationsContainer = document.querySelector('#upcomingMedications');
+            upcomingMedicationsContainer.innerHTML = '';
+
+            if (medications.length === 0) {
+                upcomingMedicationsContainer.innerHTML = '<p>No medications added yet.</p>';
+            } else {
+                // Filter for today's medications and find the next upcoming
+                const now = new Date();
+                const today = now.toISOString().split('T')[0];
+                
+                let upcomingToday = [];
+
+                medications.forEach(med => {
+                    // Check if medication is active today based on start and end dates
+                    const startDate = new Date(med.startDate);
+                    const endDate = med.endDate ? new Date(med.endDate) : null;
+                    const isToday = now >= startDate && (!endDate || now <= endDate);
+
+                    if (isToday) {
+                        med.times.forEach(time => {
+                            const [hours, minutes] = time.split(':').map(Number);
+                            const medicationTime = new Date();
+                            medicationTime.setHours(hours, minutes, 0, 0);
+
+                            if (medicationTime > now) {
+                                upcomingToday.push({
+                                    name: med.name,
+                                    time: time
+                                });
+                            }
+                        });
+                    }
+                });
+
+                upcomingToday.sort((a, b) => a.time.localeCompare(b.time));
+
+                if (upcomingToday.length > 0) {
+                    let upcomingHtml = '<p>Next upcoming:</p><ul>';
+                    // Display the next few upcoming, or all if less than a few
+                    const displayCount = Math.min(upcomingToday.length, 3);
+                    for(let i = 0; i < displayCount; i++){
+                         upcomingHtml += `<li>${upcomingToday[i].name} at ${upcomingToday[i].time}</li>`;
+                    }
+                    upcomingHtml += '</ul>';
+                     if(upcomingToday.length > displayCount) {
+                         upcomingHtml += `<small>+${upcomingToday.length - displayCount} more today</small>`;
+                    }
+                    upcomingMedicationsContainer.innerHTML = upcomingHtml;
+
+                } else {
+                    upcomingMedicationsContainer.innerHTML = '<p>No upcoming medications today.</p>';
+                }
+            }
+
+            // Load Medical History Summary
+            const medicalHistory = dataManager.getMedicalHistory();
+            const medicalHistorySummaryContainer = document.querySelector('#medicalHistorySummary');
+            if (medicalHistory.length === 0) {
+                medicalHistorySummaryContainer.textContent = 'No medical history records.';
+            } else {
+                medicalHistorySummaryContainer.innerHTML = `<p>You have <strong>${medicalHistory.length}</strong> medical history records.</p>`;
+            }
+
+            // Load Allergy Summary
+            const allergies = dataManager.getAllergies();
+            const allergySummaryContainer = document.querySelector('#allergySummary');
+             if (allergies.length === 0) {
+                allergySummaryContainer.textContent = 'No allergies recorded.';
+            } else {
+                allergySummaryContainer.innerHTML = `<p>You have <strong>${allergies.length}</strong> allergies recorded.</p>`;
+            }
+
+        }
+    </script>
+</body>
+</html>

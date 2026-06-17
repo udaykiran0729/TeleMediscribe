@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symptom Checker - TeleMediScribe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .symptom-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 2rem 0;
+        }
+        .symptom-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+        }
+        .symptom-tag {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            background: #e9ecef;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .symptom-tag:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+        .symptom-tag.selected {
+            background: #007bff;
+            color: white;
+        }
+        .severity-slider {
+            width: 100%;
+            margin: 1rem 0;
+        }
+        .result-card {
+            display: none;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .medication-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .severity-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .severity-low { background-color: #28a745; }
+        .severity-medium { background-color: #ffc107; }
+        .severity-high { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">
+                <img src="logo.png" alt="TeleMediScribe Logo" class="logo-img" />
+                <h1>TeleMediScribe</h1>
+            </div>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="symptom-check.html" class="active">Symptom Check</a></li>
+                <li><a href="medication-reminder.html">Medication Reminder</a></li>
+            </ul>
+            <div>
+                <button class="button primary" onclick="window.location.href='login.html'">Login</button>
+                <button class="button secondary" onclick="window.location.href='register.html'">Get Started</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="symptom-container">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="symptom-card">
+                        <div class="text-center mb-4">
+                            <img src="logo.png" alt="TeleMediScribe Logo" style="width: 80px; height: 80px; margin-bottom: 15px;">
+                            <h2 class="fw-bold">Symptom Checker</h2>
+                            <p class="text-muted">Select your symptoms and get instant recommendations</p>
+                        </div>
+
+                        <form id="symptomForm" onsubmit="return handleSymptomCheck(event)">
+                            <div class="mb-4">
+                                <label class="form-label">Select Symptoms</label>
+                                <div id="symptomTags" class="mb-3">
+                                    <!-- Common symptoms will be added here -->
+                                </div>
+                                <input type="text" class="form-control" id="customSymptom" placeholder="Add custom symptom">
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Severity</label>
+                                <input type="range" class="severity-slider" id="severity" min="1" max="10" value="5">
+                                <div class="d-flex justify-content-between">
+                                    <span>Mild</span>
+                                    <span>Moderate</span>
+                                    <span>Severe</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Duration</label>
+                                <select class="form-select" id="duration" required>
+                                    <option value="">Select duration</option>
+                                    <option value="less_than_day">Less than a day</option>
+                                    <option value="1-3_days">1-3 days</option>
+                                    <option value="4-7_days">4-7 days</option>
+                                    <option value="more_than_week">More than a week</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Additional Notes</label>
+                                <textarea class="form-control" id="notes" rows="3" placeholder="Any additional information about your symptoms"></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2">
+                                <span class="spinner-border spinner-border-sm me-2 loading-spinner" role="status"></span>
+                                Check Symptoms
+                            </button>
+                        </form>
+
+                        <div id="resultCard" class="result-card">
+                            <h4 class="mb-3">Analysis Results</h4>
+                            <div id="severityLevel" class="mb-3">
+                                <span class="severity-indicator"></span>
+                                <span class="severity-text"></span>
+                            </div>
+                            <div id="recommendations" class="mb-3"></div>
+                            <div id="medications" class="mb-3"></div>
+                            <div id="consultDoctorWarning" class="alert alert-warning mt-3" style="display: none;">
+                                <strong>Warning:</strong> Your symptoms are severe or have persisted for over a week. It is strongly recommended to consult a healthcare professional for a proper diagnosis and treatment plan.
+                            </div>
+                            <button class="btn btn-outline-primary" onclick="saveToMedicalHistory()">
+                                Save to Medical History
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/data.js"></script>
+    <script>
+        // Common symptoms list
+        const commonSymptoms = [
+            // Respiratory Symptoms
+            { category: 'Respiratory', symptoms: ['Cough', 'Shortness of Breath', 'Chest Pain', 'Runny Nose', 'Sore Throat', 'Congestion'] },
+            // General Symptoms
+            { category: 'General', symptoms: ['Fever', 'Fatigue', 'Body Aches', 'Chills', 'Sweating', 'Loss of Appetite'] },
+            // Digestive Symptoms
+            { category: 'Digestive', symptoms: ['Nausea', 'Vomiting', 'Diarrhea', 'Abdominal Pain', 'Indigestion', 'Constipation'] },
+            // Neurological Symptoms
+            { category: 'Neurological', symptoms: ['Headache', 'Dizziness', 'Confusion', 'Seizures', 'Numbness', 'Tingling'] },
+            // Skin Symptoms
+            { category: 'Skin', symptoms: ['Rash', 'Itching', 'Hives', 'Swelling', 'Bruising', 'Skin Discoloration'] }
+        ];
+
+        // Initialize symptom tags
+        function initializeSymptomTags() {
+            const container = document.getElementById('symptomTags');
+            container.innerHTML = ''; // Clear existing tags
+
+            commonSymptoms.forEach(category => {
+                // Add category header
+                const categoryHeader = document.createElement('div');
+                categoryHeader.className = 'symptom-category mb-2';
+                categoryHeader.innerHTML = `<h6 class="text-muted mb-2">${category.category}</h6>`;
+                container.appendChild(categoryHeader);
+
+                // Add symptoms for this category
+                const symptomsContainer = document.createElement('div');
+                symptomsContainer.className = 'd-flex flex-wrap gap-2 mb-3';
+                
+                category.symptoms.forEach(symptom => {
+                    const tag = document.createElement('span');
+                    tag.className = 'symptom-tag';
+                    tag.textContent = symptom;
+                    tag.onclick = () => toggleSymptom(tag);
+                    symptomsContainer.appendChild(tag);
+                });
+                
+                container.appendChild(symptomsContainer);
+            });
+        }
+
+        // Toggle symptom selection
+        function toggleSymptom(tag) {
+            tag.classList.toggle('selected');
+        }
+
+        // Add custom symptom
+        document.getElementById('customSymptom').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const input = e.target;
+                const symptom = input.value.trim();
+                
+                if (symptom && !commonSymptoms.some(category => category.symptoms.includes(symptom))) {
+                    const tag = document.createElement('span');
+                    tag.className = 'symptom-tag selected';
+                    tag.textContent = symptom;
+                    tag.onclick = () => toggleSymptom(tag);
+                    document.getElementById('symptomTags').appendChild(tag);
+                    input.value = '';
+                }
+            }
+        });
+
+        // Handle symptom check
+        function handleSymptomCheck(event) {
+            event.preventDefault();
+            
+            const selectedSymptoms = Array.from(document.querySelectorAll('.symptom-tag.selected'))
+                .map(tag => tag.textContent);
+            
+            if (selectedSymptoms.length === 0) {
+                alert('Please select at least one symptom');
+                return false;
+            }
+
+            const severity = document.getElementById('severity').value;
+            const duration = document.getElementById('duration').value;
+            const notes = document.getElementById('notes').value;
+
+            // Show loading state
+            const spinner = document.querySelector('.loading-spinner');
+            const submitBtn = document.querySelector('#symptomForm button[type="submit"]');
+            spinner.style.display = 'inline-block';
+            submitBtn.disabled = true;
+
+            // Simulate analysis (in a real app, this would use a medical API)
+            setTimeout(() => {
+                analyzeSymptoms(selectedSymptoms, severity, duration, notes);
+                spinner.style.display = 'none';
+                submitBtn.disabled = false;
+            }, 1500);
+
+            return false;
+        }
+
+        // Analyze symptoms and provide recommendations
+        function analyzeSymptoms(symptoms, severity, duration, notes) {
+            const resultCard = document.getElementById('resultCard');
+            const severityLevel = document.getElementById('severityLevel');
+            const recommendations = document.getElementById('recommendations');
+            const medications = document.getElementById('medications');
+            const consultDoctorWarning = document.getElementById('consultDoctorWarning');
+
+            // Determine severity level
+            let severityClass, severityText;
+            if (severity <= 3) {
+                severityClass = 'severity-low';
+                severityText = 'Low Severity';
+            } else if (severity <= 7) {
+                severityClass = 'severity-medium';
+                severityText = 'Medium Severity';
+            } else {
+                severityClass = 'severity-high';
+                severityText = 'High Severity';
+            }
+
+            // Update severity indicator
+            severityLevel.innerHTML = `
+                <span class="severity-indicator ${severityClass}"></span>
+                <span class="severity-text">${severityText}</span>
+            `;
+
+            // Generate detailed recommendations based on symptoms
+            let recommendationText = '<h5>Recommendations:</h5>';
+            
+            // Group symptoms by category
+            const symptomsByCategory = {};
+            symptoms.forEach(symptom => {
+                commonSymptoms.forEach(category => {
+                    if (category.symptoms.includes(symptom)) {
+                        if (!symptomsByCategory[category.category]) {
+                            symptomsByCategory[category.category] = [];
+                        }
+                        symptomsByCategory[category.category].push(symptom);
+                    }
+                });
+            });
+
+            // Generate category-specific recommendations
+            recommendationText += '<div class="recommendations-list">';
+            
+            // Respiratory recommendations
+            if (symptomsByCategory['Respiratory']) {
+                recommendationText += `
+                    <div class="recommendation-category mb-3">
+                        <h6 class="text-primary">Respiratory Care:</h6>
+                        <ul>
+                            <li>Use a humidifier to add moisture to the air</li>
+                            <li>Stay hydrated by drinking plenty of fluids</li>
+                            <li>Try steam inhalation with essential oils (eucalyptus or peppermint)</li>
+                            <li>Elevate your head while sleeping to reduce congestion</li>
+                            <li>Avoid smoking and exposure to secondhand smoke</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // General wellness recommendations
+            recommendationText += `
+                <div class="recommendation-category mb-3">
+                    <h6 class="text-primary">General Wellness:</h6>
+                    <ul>
+                        <li>Get adequate rest and sleep</li>
+                        <li>Maintain a balanced diet rich in vitamins and minerals</li>
+                        <li>Stay hydrated by drinking plenty of water</li>
+                        <li>Practice stress-reduction techniques</li>
+                        <li>Consider taking vitamin C and zinc supplements</li>
+                    </ul>
+                </div>
+            `;
+
+            // Digestive recommendations
+            if (symptomsByCategory['Digestive']) {
+                recommendationText += `
+                    <div class="recommendation-category mb-3">
+                        <h6 class="text-primary">Digestive Care:</h6>
+                        <ul>
+                            <li>Eat small, frequent meals</li>
+                            <li>Avoid spicy, fatty, or acidic foods</li>
+                            <li>Stay hydrated with clear fluids</li>
+                            <li>Consider probiotics for gut health</li>
+                            <li>Practice mindful eating</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            recommendationText += '</div>';
+            recommendations.innerHTML = recommendationText;
+
+            // Suggest medications with detailed information
+            let medicationText = '<h5>Suggested Medications:</h5>';
+            if (severity > 5 || duration === 'more_than_week') {
+                medicationText += `
+                    <div class="medication-card">
+                        <h6>Important: Consult a Doctor</h6>
+                        <p>Based on your symptoms and duration, it is highly recommended to seek professional medical advice.</p>
+                        <div class="alert alert-warning mt-3">
+                            <h6 class="mb-2">When to Seek Emergency Care:</h6>
+                            <ul class="mb-0">
+                                <li>Difficulty breathing or shortness of breath</li>
+                                <li>Persistent chest pain or pressure</li>
+                                <li>Sudden confusion or difficulty waking up</li>
+                                <li>Bluish lips or face</li>
+                                <li>Severe or persistent vomiting</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                consultDoctorWarning.style.display = 'block';
+            } else {
+                // Provide detailed medication suggestions
+                medicationText += `
+                    <div class="medication-card">
+                        <h6>Over-the-counter options:</h6>
+                        <div class="medication-categories">
+                            ${generateMedicationSuggestions(symptomsByCategory)}
+                        </div>
+                        <div class="alert alert-info mt-3">
+                            <h6 class="mb-2">Important Information:</h6>
+                            <p class="mb-2">• All medications listed are FDA-approved over-the-counter medications.</p>
+                            <p class="mb-2">• Please consult your healthcare provider before taking any new medication.</p>
+                            <p class="mb-2">• For detailed medication information, visit <a href="https://www.fda.gov/drugs" target="_blank">FDA's Drug Information</a> or <a href="https://www.drugs.com" target="_blank">Drugs.com</a>.</p>
+                            <p class="mb-2">• Your health data is protected and handled in accordance with applicable privacy laws and regulations.</p>
+                            <p class="mb-0">• Always read and follow the medication label instructions carefully.</p>
+                        </div>
+                    </div>
+                `;
+                consultDoctorWarning.style.display = 'none';
+            }
+            medications.innerHTML = medicationText;
+
+            // Show results
+            resultCard.style.display = 'block';
+        }
+
+        // Generate medication suggestions based on symptoms
+        function generateMedicationSuggestions(symptomsByCategory) {
+            let suggestions = '';
+
+            // Pain and Fever
+            if (symptomsByCategory['General']?.includes('Fever') || symptomsByCategory['General']?.includes('Body Aches')) {
+                suggestions += `
+                    <div class="medication-category mb-3">
+                        <h6 class="text-primary">Pain and Fever Relief:</h6>
+                        <div class="medication-item">
+                            <h6>Acetaminophen (Tylenol)</h6>
+                            <p class="mb-1">• For fever and mild to moderate pain</p>
+                            <p class="mb-1">• Dosage: 500-1000mg every 4-6 hours as needed</p>
+                            <p class="mb-2">• Maximum: 4000mg per day</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                        <div class="medication-item">
+                            <h6>Ibuprofen (Advil, Motrin)</h6>
+                            <p class="mb-1">• For fever, pain, and inflammation</p>
+                            <p class="mb-1">• Dosage: 200-400mg every 4-6 hours as needed</p>
+                            <p class="mb-2">• Maximum: 1200mg per day</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Respiratory
+            if (symptomsByCategory['Respiratory']) {
+                suggestions += `
+                    <div class="medication-category mb-3">
+                        <h6 class="text-primary">Respiratory Relief:</h6>
+                        <div class="medication-item">
+                            <h6>Guaifenesin (Mucinex)</h6>
+                            <p class="mb-1">• For chest congestion and mucus</p>
+                            <p class="mb-1">• Dosage: 600-1200mg every 12 hours</p>
+                            <p class="mb-2">• Stay hydrated while taking</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                        <div class="medication-item">
+                            <h6>Pseudoephedrine (Sudafed)</h6>
+                            <p class="mb-1">• For nasal congestion</p>
+                            <p class="mb-1">• Dosage: 30-60mg every 4-6 hours</p>
+                            <p class="mb-2">• Maximum: 240mg per day</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Digestive
+            if (symptomsByCategory['Digestive']) {
+                suggestions += `
+                    <div class="medication-category mb-3">
+                        <h6 class="text-primary">Digestive Relief:</h6>
+                        <div class="medication-item">
+                            <h6>Bismuth Subsalicylate (Pepto-Bismol)</h6>
+                            <p class="mb-1">• For nausea, heartburn, and diarrhea</p>
+                            <p class="mb-1">• Dosage: 2 tablets every 30-60 minutes as needed</p>
+                            <p class="mb-2">• Maximum: 8 doses per day</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                        <div class="medication-item">
+                            <h6>Loperamide (Imodium)</h6>
+                            <p class="mb-1">• For diarrhea</p>
+                            <p class="mb-1">• Dosage: 2mg after first loose stool</p>
+                            <p class="mb-2">• Maximum: 8mg per day</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Neurological
+            if (symptomsByCategory['Neurological']) {
+                suggestions += `
+                    <div class="medication-category mb-3">
+                        <h6 class="text-primary">Headache Relief:</h6>
+                        <div class="medication-item">
+                            <h6>Acetaminophen + Caffeine (Excedrin)</h6>
+                            <p class="mb-1">• For tension headaches</p>
+                            <p class="mb-1">• Dosage: 2 tablets every 6 hours as needed</p>
+                            <p class="mb-2">• Maximum: 8 tablets per day</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Skin
+            if (symptomsByCategory['Skin']) {
+                suggestions += `
+                    <div class="medication-category mb-3">
+                        <h6 class="text-primary">Skin Relief:</h6>
+                        <div class="medication-item">
+                            <h6>Diphenhydramine (Benadryl)</h6>
+                            <p class="mb-1">• For allergic reactions and itching</p>
+                            <p class="mb-1">• Dosage: 25-50mg every 4-6 hours</p>
+                            <p class="mb-2">• Maximum: 300mg per day</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                        <div class="medication-item">
+                            <h6>Hydrocortisone Cream</h6>
+                            <p class="mb-1">• For skin inflammation and itching</p>
+                            <p class="mb-1">• Apply thin layer 2-4 times daily</p>
+                            <p class="mb-2">• Do not use on face without doctor's approval</p>
+                            <a href="#" target="_blank" class="btn btn-sm btn-outline-primary">[Purchase Link]</a>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return suggestions;
+        }
+
+        // Save to medical history
+        function saveToMedicalHistory() {
+            const selectedSymptoms = Array.from(document.querySelectorAll('.symptom-tag.selected'))
+                .map(tag => tag.textContent);
+            const severity = document.getElementById('severity').value;
+            const duration = document.getElementById('duration').value;
+            const notes = document.getElementById('notes').value;
+
+            try {
+                dataManager.addMedicalHistory({
+                    condition: selectedSymptoms.join(', '),
+                    diagnosisDate: new Date().toISOString(),
+                    treatment: document.getElementById('recommendations').innerText,
+                    notes: `Severity: ${severity}/10, Duration: ${duration}, Additional Notes: ${notes}`
+                });
+
+                alert('Saved to medical history successfully!');
+            } catch (error) {
+                console.error('Error saving to medical history:', error);
+                alert('Error saving to medical history. Please try again.');
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if user is logged in
+            const currentUser = dataManager.getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            initializeSymptomTags();
+        });
+    </script>
+</body>
+</html> 
